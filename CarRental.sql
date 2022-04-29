@@ -115,3 +115,43 @@ SELECT veh_reg_no
 FROM rental_records 
 WHERE rental_records.start_date BETWEEN curdate() AND date_add(CURDATE(), INTERVAL 10 DAY));
 
+-- Advanced(Optional)
+/* 1.Foreign Key Test
+	1)Try deleting a parent row with matching row(s) in child table(s), e.g., delete 'GA6666F' from vehicles table (ON DELETE RESTRICT).
+*/
+DELETE FROM vehicles WHERE veh_reg_no = 'GA6666F'; -- Recieved error code 1451 Cannot delete or update parent row: a foreign key...
+
+ /* 2)Try updating a parent row with matching row(s) in child table(s), e.g., rename 'GA6666F' to 'GA9999F' in vehicles table. 
+	 Check the effects on the child table rental_records (ON UPDATE CASCADE). */
+UPDATE vehicles 
+SET veh_reg_no = 'GA9999F'
+WHERE veh_reg_no = 'GA6666F';
+SELECT * FROM vehicles;
+SELECT * FROM rental_records; -- UPDATE ON CASCADE allows the change in parent and child
+ -- 3.Remove 'GA6666F' from the database (Hints: Remove it from child table rental_records; then parent table vehicles.)
+DELETE FROM rental_records
+WHERE veh_reg_no = 'GA6666F';
+DELETE FROM vehicles
+WHERE veh_reg_no = 'GA6666F';
+SELECT * FROM rental_records;
+SELECT * FROM vehicles;
+-- Neither query above has an affect. Unsure if something was or if this was to demonstrate the update made above worked.
+ 
+/* 2.Payments: A rental could be paid over a number of payments (e.g., deposit, installments, full payment). 
+Each payment is for one rental. Create a new table called payments. Need to create columns to facilitate proper audit check 
+(such as create_date, create_by, last_update_date, last_update_by, etc.) */
+CREATE TABLE payments (
+   `payment_id`  		INT UNSIGNED NOT NULL AUTO_INCREMENT,
+   `rental_id`    		INT UNSIGNED NOT NULL,
+   `create_date` 		DATETIME  NOT NULL,
+   `create_by`          INT UNSIGNED  NOT NULL,  -- staff_id
+   `last_update_date`   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+   `last_update_by`     INT UNSIGNED  NOT NULL,
+   `amount`       		DECIMAL(8,2) NOT NULL DEFAULT 0,
+   `form`         		ENUM('credit', 'debit', 'cash', 'crypto'),
+   `payment_type` 		ENUM('deposit', 'partial', 'full') NOT NULL DEFAULT 'full',
+   
+   PRIMARY KEY (`payment_id`),
+   INDEX       (`rental_id`),
+   FOREIGN KEY (`rental_id`) REFERENCES rental_records (`rental_id`)
+) ENGINE=InnoDB;
